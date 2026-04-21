@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Performance</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <style>
+    body {
+      background: linear-gradient(180deg, #020617, #0f172a);
+    }
+  </style>
+</head>
+
+<body class="text-white min-h-screen px-4 py-6">
+
+  <h1 class="text-2xl font-bold mb-5">📊 Performance</h1>
+
+  <div class="flex gap-3 mb-6">
+    <button onclick="loadOnline()" class="flex-1 bg-blue-600 p-3 rounded-xl">
+      Online
+    </button>
+
+    <button onclick="loadOffline()" class="flex-1 bg-purple-600 p-3 rounded-xl">
+      Offline
+    </button>
+  </div>
+
+  <div id="results" class="space-y-4">Loading...</div>
+
+  <script type="module">
+
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import {
+      getFirestore,
+      collection,
+      getDocs,
+      doc,
+      getDoc
+    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+    import {
+      getAuth,
+      onAuthStateChanged
+    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyADk8OyaN6-8sbzuq3s0TTbe9cO1ryv4PA",
+      authDomain: "ikvm-226e7.firebaseapp.com",
+      projectId: "ikvm-226e7"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
+
+    let userEmail = "";
+
+    // 🔥 AUTH
+    onAuthStateChanged(auth, async (user) => {
+
+      if (!user) {
+        window.location.href = "index.html";
+        return;
+      }
+
+      userEmail = user.email;
+
+      // 🔥 AUTO LOAD ONLINE
+      loadOnline();
+    });
+
+    // 🔵 ONLINE RESULTS (FINAL FIX)
+window.loadOnline = async function () {
+
+  const container = document.getElementById("results");
+  container.innerHTML = "Loading online results...";
+
+  try {
+    const testSnap = await getDocs(collection(db, "tests"));
+
+    // 🔥 PARALLEL FETCH (FAST)
+    const promises = testSnap.docs.map(async (testDoc) => {
+
+      const testId = testDoc.id;
+      const testData = testDoc.data();
+
+      const ref = doc(db, "results", testId, "students", userEmail);
+      const snap = await getDoc(ref);
+
+      if (snap.exists()) {
+        const data = snap.data();
+
+        return cardHTML(
+          testData.testName || "Test",
+          data.score,
+          data.total
+        );
+      }
+
+      return null;
+    });
+
+    const results = await Promise.all(promises);
+
+    // remove null values
+    const filtered = results.filter(r => r !== null);
+
+    container.innerHTML = filtered.join("") || "No online results found";
+
+  } catch (err) {
+    console.error(err);
+    container.innerHTML = "Error loading results";
+  }
+};
+
+    // 🟣 OFFLINE RESULTS
+    window.loadOffline = async function () {
+
+      const container = document.getElementById("results");
+      container.innerHTML = "Loading offline results...";
+
+      let html = "";
+
+      const testSnap = await getDocs(collection(db, "tests"));
+
+      testSnap.forEach(docSnap => {
+
+        const test = docSnap.data();
+        const safeEmail = userEmail.replace(/\./g, "_");
+
+        if (
+          test.mode === "offline" &&
+          test.resultsPublished &&
+          test.marks &&
+          test.marks[safeEmail] !== undefined
+        ) {
+          html += cardHTML(
+            test.testName,
+            test.marks[safeEmail],
+            test.totalMarks
+          );
+        }
+      });
+
+      container.innerHTML = html || "No offline results found";
+    };
+
+    function cardHTML(title, score, total) {
+
+      const percent = Math.round((score / total) * 100);
+
+      return `
+        <div class="bg-white/5 border border-white/10 rounded-2xl p-5">
+
+          <h2 class="text-lg font-semibold">${title}</h2>
+
+          <p class="mt-2 text-xl font-bold">${score} / ${total}</p>
+
+          <p>${percent}%</p>
+
+          <p class="${percent >= 40 ? "text-green-400" : "text-red-400"}">
+            ${percent >= 40 ? "Passed" : "Failed"}
+          </p>
+
+        </div>
+      `;
+    }
+
+  </script>
+
+</body>
+</html>

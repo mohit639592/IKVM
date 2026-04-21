@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+
+  <!-- 🔥 MOBILE FIX -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>IKVM Login</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <style>
+    body {
+      background: radial-gradient(circle at top, #0f172a, #020617);
+      font-family: sans-serif;
+    }
+  </style>
+</head>
+
+<body class="flex items-center justify-center min-h-screen px-4 text-white">
+
+  <!-- LOGIN CARD -->
+  <div class="w-full max-w-md bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-7 shadow-2xl">
+
+    <h1 class="text-3xl font-bold text-center mb-1">IKVM</h1>
+    <p class="text-gray-400 text-center mb-6 text-sm">Student Portal</p>
+
+    <!-- EMAIL -->
+    <input 
+      id="email"
+      type="email" 
+      placeholder="Enter Email"
+      class="w-full p-4 mb-4 rounded-xl bg-white/10 text-white placeholder-gray-400 outline-none focus:ring-2 focus:ring-purple-500"
+    >
+
+    <!-- PASSWORD -->
+    <input 
+      id="password"
+      type="password" 
+      placeholder="Enter Password"
+      class="w-full p-4 mb-5 rounded-xl bg-white/10 text-white placeholder-gray-400 outline-none focus:ring-2 focus:ring-purple-500"
+    >
+
+    <!-- BUTTON -->
+    <button 
+      onclick="loginUser()" 
+      id="loginBtn"
+      class="w-full bg-gradient-to-r from-purple-600 to-pink-600 active:scale-95 transition-all text-white p-4 rounded-xl font-semibold text-lg"
+    >
+      Login
+    </button>
+
+    <!-- STATUS -->
+    <p id="status" class="text-center text-sm mt-4 text-gray-400"></p>
+
+  </div>
+
+  <!-- 🔥 FIREBASE LOGIC -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { 
+      getAuth, 
+      signInWithEmailAndPassword 
+    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+    // ✅ YOUR FIREBASE CONFIG
+    const firebaseConfig = {
+      apiKey: "AIzaSyADk8OyaN6-8sbzuq3s0TTbe9cO1ryv4PA",
+      authDomain: "ikvm-226e7.firebaseapp.com",
+      projectId: "ikvm-226e7",
+      storageBucket: "ikvm-226e7.firebasestorage.app",
+      messagingSenderId: "760869116173",
+      appId: "1:760869116173:web:ef05c859b6f116d2673844"
+    };
+
+    // INIT
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+
+    // LOGIN FUNCTION
+    window.loginUser = async function () {
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value.trim();
+      const status = document.getElementById("status");
+      const btn = document.getElementById("loginBtn");
+
+      if (!email || !password) {
+        status.innerText = "Please fill all fields ❗";
+        return;
+      }
+
+      try {
+        btn.innerText = "Logging in...";
+        btn.disabled = true;
+
+        await signInWithEmailAndPassword(auth, email, password);
+
+        status.innerText = "Login successful ✅";
+
+        // 🔥 ADMIN CHECK
+        setTimeout(() => {
+          if (email === "admin@gmail.com") {
+            window.location.href = "admin.html";
+          } else {
+            window.location.href = "dashboard.html";
+          }
+        }, 800);
+
+      } catch (error) {
+        status.innerText = "❌ " + error.message;
+        btn.disabled = false;
+        btn.innerText = "Login";
+      }
+    };
+  </script>
+
+</body>
+</html>

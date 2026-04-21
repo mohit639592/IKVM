@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <style>
+    body {
+      background: linear-gradient(180deg, #020617, #0f172a);
+    }
+  </style>
+</head>
+
+<body class="text-white min-h-screen px-4 py-6">
+
+  <!-- HEADER -->
+  <div class="flex justify-between items-center mb-5">
+    <h1 class="text-xl font-bold">📝 Test</h1>
+    <button onclick="goBack()" class="bg-white/10 px-3 py-1 rounded-lg text-sm">Exit</button>
+  </div>
+
+  <!-- QUESTIONS -->
+  <div id="questions" class="space-y-5"></div>
+
+  <!-- SUBMIT -->
+  <button onclick="submitTest()" 
+    class="w-full mt-6 bg-green-600 p-4 rounded-xl font-semibold">
+    Submit Test
+  </button>
+
+  <script type="module">
+
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+
+    import {
+      getFirestore,
+      collection,
+      getDocs,
+      doc,
+      setDoc,
+      getDoc
+    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+    import {
+      getAuth,
+      onAuthStateChanged
+    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyADk8OyaN6-8sbzuq3s0TTbe9cO1ryv4PA",
+      authDomain: "ikvm-226e7.firebaseapp.com",
+      projectId: "ikvm-226e7"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
+
+    const params = new URLSearchParams(window.location.search);
+    const testId = params.get("id");
+
+    let answers = {};
+    let questionsData = [];
+    let userEmail = "";
+    let authReady = false;
+
+    // 🔥 FIXED AUTH HANDLER
+    onAuthStateChanged(auth, async (user) => {
+
+      if (user) {
+        authReady = true;
+
+        userEmail = user.email;
+        await checkAttempt();
+
+      } else {
+        // ⏳ wait before redirect
+        setTimeout(() => {
+          if (!authReady && !auth.currentUser) {
+            window.location.href = "index.html";
+          }
+        }, 1500);
+      }
+    });
+
+    // 🔒 CHECK ATTEMPT
+    async function checkAttempt() {
+      try {
+        const resultRef = doc(db, "results", testId, "students", userEmail);
+        const resultSnap = await getDoc(resultRef);
+
+        if (resultSnap.exists()) {
+          alert("You have already attempted this test!");
+          window.location.href = `result.html?id=${testId}`;
+        } else {
+          loadQuestions();
+        }
+      } catch (err) {
+        console.error(err);
+        alert("Error checking attempt");
+      }
+    }
+
+    // 📥 LOAD QUESTIONS
+    async function loadQuestions() {
+      const container = document.getElementById("questions");
+      container.innerHTML = "Loading questions...";
+
+      try {
+        const snapshot = await getDocs(
+          collection(db, "tests", testId, "questions")
+        );
+
+        container.innerHTML = "";
+
+        let index = 1;
+
+        snapshot.forEach(docSnap => {
+          const q = docSnap.data();
+
+          questionsData.push({
+            id: docSnap.id,
+            correct: q.correct
+          });
+
+          container.innerHTML += `
+            <div class="bg-white/5 border border-white/10 p-4 rounded-xl">
+              <p class="mb-3 font-semibold">${index}. ${q.question}</p>
+
+              ${q.options.map(opt => `
+                <label class="block mb-2">
+                  <input 
+                    type="radio" 
+                    name="q${docSnap.id}" 
+                    value="${opt}" 
+                    onclick="saveAnswer('${docSnap.id}', '${opt}')"
+                  >
+                  ${opt}
+                </label>
+              `).join("")}
+            </div>
+          `;
+
+          index++;
+        });
+
+      } catch (err) {
+        console.error(err);
+        container.innerHTML = "Error loading questions";
+      }
+    }
+
+    // 💾 SAVE ANSWER
+    window.saveAnswer = function (qid, value) {
+      answers[qid] = value;
+    };
+
+    // 📤 SUBMIT
+    window.submitTest = async function () {
+
+      if (questionsData.length === 0) {
+        alert("Questions not loaded yet!");
+        return;
+      }
+
+      let score = 0;
+      const total = questionsData.length;
+
+      questionsData.forEach(q => {
+        if (answers[q.id] === q.correct) {
+          score++;
+        }
+      });
+
+      try {
+
+        // ✅ Ensure parent doc exists
+        await setDoc(
+          doc(db, "results", testId),
+          { created: true },
+          { merge: true }
+        );
+
+        await setDoc(
+          doc(db, "results", testId, "students", userEmail),
+          {
+            email: userEmail,
+            score: score,
+            total: total,
+            testId: testId,
+            timestamp: Date.now(),
+            type: "online"
+          }
+        );
+
+        alert(`Test submitted! Score: ${score}/${total}`);
+        window.location.href = `result.html?id=${testId}`;
+
+      } catch (err) {
+        console.error(err);
+        alert("Error saving result");
+      }
+    };
+
+    window.goBack = function () {
+      window.location.href = "tests.html";
+    };
+
+  </script>
+
+</body>
+</html>

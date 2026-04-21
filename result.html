@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Results</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <style>
+    body {
+      background: linear-gradient(180deg, #020617, #0f172a);
+    }
+  </style>
+</head>
+
+<body class="text-white min-h-screen px-4 py-6">
+
+  <h1 class="text-2xl font-bold mb-5">📊 Results</h1>
+
+  <div id="resultList" class="space-y-4"></div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import {
+      getFirestore,
+      collection,
+      getDocs,
+      doc,
+      getDoc
+    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+    import {
+      getAuth,
+      onAuthStateChanged
+    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyADk8OyaN6-8sbzuq3s0TTbe9cO1ryv4PA",
+      authDomain: "ikvm-226e7.firebaseapp.com",
+      projectId: "ikvm-226e7"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
+
+    const params = new URLSearchParams(window.location.search);
+    const testId = params.get("id");
+    const showAll = params.get("all");
+
+    let userEmail = "";
+
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        window.location.href = "index.html";
+        return;
+      }
+
+      userEmail = user.email;
+
+      if (testId) {
+        loadSingleResult(testId);
+      } else {
+        loadAllResults();
+      }
+    });
+
+    // 🔥 SINGLE RESULT
+    async function loadSingleResult(testId) {
+      const container = document.getElementById("resultList");
+
+      // ONLINE
+      const onlineRef = doc(db, "results", testId, "students", userEmail);
+      const onlineSnap = await getDoc(onlineRef);
+
+      if (onlineSnap.exists()) {
+        const d = onlineSnap.data();
+        renderCard(container, "Online Test", d.score, d.total);
+        return;
+      }
+
+      // OFFLINE
+      const testRef = doc(db, "tests", testId);
+      const testSnap = await getDoc(testRef);
+
+      if (testSnap.exists()) {
+        const test = testSnap.data();
+
+        const safeEmail = userEmail.replace(/\./g, "_");
+
+        if (test.marks && test.marks[safeEmail] !== undefined) {
+          renderCard(container, test.testName, test.marks[safeEmail], test.totalMarks);
+          return;
+        }
+      }
+
+      container.innerHTML = "No result found";
+    }
+
+    // 🔥 ALL RESULTS
+    async function loadAllResults() {
+      const container = document.getElementById("resultList");
+      let html = "";
+
+      // ONLINE
+      const resSnap = await getDocs(collection(db, "results"));
+
+      for (const d of resSnap.docs) {
+        const ref = doc(db, "results", d.id, "students", userEmail);
+        const snap = await getDoc(ref);
+
+        if (snap.exists()) {
+          const data = snap.data();
+          html += cardHTML("Online", data.score, data.total);
+        }
+      }
+
+      // OFFLINE
+      const testSnap = await getDocs(collection(db, "tests"));
+
+      testSnap.forEach(docSnap => {
+        const test = docSnap.data();
+        const safeEmail = userEmail.replace(/\./g, "_");
+
+        if (
+          test.mode === "offline" &&
+          test.resultsPublished &&
+          test.marks &&
+          test.marks[safeEmail] !== undefined
+        ) {
+          html += cardHTML(test.testName, test.marks[safeEmail], test.totalMarks);
+        }
+      });
+
+      container.innerHTML = html || "No results found";
+    }
+
+    // 🔥 CARD UI
+    function renderCard(container, title, score, total) {
+      const percent = Math.round((score / total) * 100);
+
+      container.innerHTML = cardHTML(title, score, total);
+    }
+
+    function cardHTML(title, score, total) {
+      const percent = Math.round((score / total) * 100);
+
+      return `
+        <div class="bg-white/5 border border-white/10 rounded-2xl p-5">
+
+          <h2 class="text-lg font-semibold">${title}</h2>
+
+          <p class="mt-2 text-xl font-bold">${score} / ${total}</p>
+
+          <p>${percent}%</p>
+
+          <p class="${percent >= 40 ? "text-green-400" : "text-red-400"}">
+            ${percent >= 40 ? "Passed" : "Failed"}
+          </p>
+
+        </div>
+      `;
+    }
+  </script>
+
+</body>
+</html>
