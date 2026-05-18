@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
+
+  <title>Homework Attendance</title>
+
+  <!-- TAILWIND -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- ICONS -->
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+  >
+
+  <style>
+
+    body{
+      background: #050505;
+      font-family: Arial, sans-serif;
+      color: white;
+    }
+
+    .card{
+      background: #111111;
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 24px;
+    }
+
+    .circle{
+      width: 95px;
+      height: 95px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background:
+      conic-gradient(
+        #22c55e var(--percent),
+        #222 var(--percent)
+      );
+    }
+
+    .circleInner{
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      background: #111;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      font-weight: bold;
+    }
+
+  </style>
+
+</head>
+
+<body class="pb-24">
+
+  <!-- HEADER -->
+  <div class="bg-black border-b border-white/10 px-4 py-4 sticky top-0 z-50">
+
+    <div class="flex justify-between items-center">
+
+      <!-- LEFT -->
+      <div class="flex items-center gap-4">
+
+        <button
+          onclick="goBack()"
+          class="text-2xl"
+        >
+          <i class="fa-solid fa-arrow-left"></i>
+        </button>
+
+        <div>
+
+          <h1 class="text-2xl font-black">
+            Homework Attendance
+          </h1>
+
+          <p class="text-xs text-gray-400 mt-1">
+            Track homework completion
+          </p>
+
+        </div>
+
+      </div>
+
+      <!-- RIGHT -->
+      <div class="w-11 h-11 rounded-xl bg-green-500/10 flex items-center justify-center text-green-400 text-xl">
+        <i class="fa-solid fa-chart-simple"></i>
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- MAIN -->
+  <div class="p-4">
+
+    <!-- OVERALL -->
+    <div class="card p-5 mb-5">
+
+      <div class="flex justify-between items-center gap-5">
+
+        <!-- LEFT -->
+        <div>
+
+          <h2 class="text-2xl font-bold">
+            Overall Homework
+          </h2>
+
+          <p class="text-gray-400 text-sm mt-2">
+            Total homework completion status
+          </p>
+
+          <div class="mt-4">
+
+            <span
+              id="status"
+              class="bg-green-500/10 text-green-400 px-4 py-2 rounded-full text-sm"
+            >
+              Excellent
+            </span>
+
+          </div>
+
+        </div>
+
+        <!-- RIGHT -->
+        <div
+          id="overallCircle"
+          class="circle"
+          style="--percent:0%;"
+        >
+
+          <div class="circleInner">
+
+            <span id="overallPercent">
+              0%
+            </span>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- TITLE -->
+    <div class="flex items-center justify-between mb-4">
+
+      <h2 class="text-2xl font-bold">
+        Homework Stats
+      </h2>
+
+      <p
+        id="count"
+        class="text-sm text-gray-400"
+      >
+        Loading...
+      </p>
+
+    </div>
+
+    <!-- LIST -->
+<div
+  id="attendanceList"
+  class="space-y-4"
+></div>
+
+<!-- NEW ATTENDANCE -->
+<div
+  id="newAttendance"
+  class="space-y-4 mt-5"
+></div>
+
+  </div>
+
+  <!-- FIREBASE -->
+  <script type="module">
+
+    import { initializeApp }
+    from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+
+    import {
+      getAuth,
+      onAuthStateChanged
+    }
+    from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+    import {
+      getFirestore,
+      doc,
+      getDoc
+    }
+    from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+    // CONFIG
+    const firebaseConfig = {
+      apiKey: "AIzaSyADk8OyaN6-8sbzuq3s0TTbe9cO1ryv4PA",
+      authDomain: "ikvm-226e7.firebaseapp.com",
+      projectId: "ikvm-226e7"
+    };
+
+    // INIT
+    const app = initializeApp(firebaseConfig);
+
+    const auth = getAuth(app);
+
+    const db = getFirestore(app);
+
+    // AUTH
+   // AUTH
+onAuthStateChanged(auth, async (user) => {
+
+  if (!user) {
+
+    window.location.href =
+    "index.html";
+
+    return;
+  }
+
+  // LOAD OLD HOMEWORK SYSTEM
+  loadAttendance(user.email);
+
+  // LOAD NEW FN / AN SYSTEM
+  loadNewAttendance(user.email);
+
+});
+
+    // LOAD ATTENDANCE
+    async function loadAttendance(email) {
+
+      const container =
+      document.getElementById("attendanceList");
+
+      container.innerHTML = `
+
+        <div class="card p-5 text-center text-gray-400">
+          Loading Homework Attendance...
+        </div>
+
+      `;
+
+      // FIRESTORE DOC
+      const ref =
+      doc(db, "homework_attendance", email);
+
+      const snap =
+      await getDoc(ref);
+
+      // NO DATA
+      if (!snap.exists()) {
+
+        container.innerHTML = `
+
+          <div class="card p-6 text-center">
+
+            <div class="text-5xl mb-4">
+              📚
+            </div>
+
+            <h2 class="text-xl font-bold">
+              No Data Found
+            </h2>
+
+            <p class="text-gray-400 text-sm mt-2">
+              Homework attendance not available.
+            </p>
+
+          </div>
+
+        `;
+
+        return;
+      }
+
+      // DATA
+      const data =
+      snap.data();
+
+      const totalHeld =
+      data.totalHeld || 0;
+
+      const totalDone =
+      data.totalDone || 0;
+
+      const name =
+      data.name || "Student";
+
+      const className =
+      data.class || "-";
+
+      const updated =
+      data.lastUpdatedDate || "-";
+
+      // PERCENT
+      let percent = 0;
+
+      if (totalHeld > 0) {
+
+        percent =
+        Math.round(
+          (totalDone / totalHeld) * 100
+        );
+
+      }
+
+      // UPDATE UI
+      document.getElementById("overallPercent")
+      .innerText =
+      percent + "%";
+
+      document.getElementById("overallCircle")
+      .style.setProperty(
+        "--percent",
+        percent + "%"
+      );
+
+      document.getElementById("count")
+      .innerText =
+      `${totalDone}/${totalHeld} Completed`;
+
+      // STATUS
+      const status =
+      document.getElementById("status");
+
+      if (percent >= 85) {
+
+        status.innerText =
+        "Excellent";
+
+      }
+
+      else if (percent >= 75) {
+
+        status.innerText =
+        "Good";
+
+        status.className =
+        "bg-yellow-500/10 text-yellow-400 px-4 py-2 rounded-full text-sm";
+
+      }
+
+      else {
+
+        status.innerText =
+        "Low";
+
+        status.className =
+        "bg-red-500/10 text-red-400 px-4 py-2 rounded-full text-sm";
+
+      }
+
+      // DISPLAY
+      container.innerHTML = `
+
+        <!-- CARD -->
+        <div class="card p-5">
+
+          <div class="flex justify-between items-center gap-5">
+
+            <!-- LEFT -->
+            <div>
+
+              <div class="flex items-center gap-3 mb-4">
+
+                <div class="w-14 h-14 rounded-2xl bg-blue-500/10 flex items-center justify-center text-2xl">
+                  👨‍🎓
+                </div>
+
+                <div>
+
+                  <h2 class="text-xl font-bold">
+                    ${name}
+                  </h2>
+
+                  <p class="text-gray-400 text-sm">
+                    Class ${className}
+                  </p>
+
+                </div>
+
+              </div>
+
+              <div class="space-y-2">
+
+                <p class="text-sm text-gray-400">
+                  Total Homework:
+                  <span class="text-white font-semibold">
+                    ${totalHeld}
+                  </span>
+                </p>
+
+                <p class="text-sm text-gray-400">
+                  Completed:
+                  <span class="text-green-400 font-semibold">
+                    ${totalDone}
+                  </span>
+                </p>
+
+                <p class="text-sm text-gray-400">
+                  Last Updated:
+                  <span class="text-white">
+                    ${updated}
+                  </span>
+                </p>
+
+              </div>
+
+            </div>
+
+            <!-- RIGHT -->
+            <div
+              class="circle"
+              style="
+                --percent:${percent}%;
+              "
+            >
+
+              <div class="circleInner">
+
+                <span>
+                  ${percent}%
+                </span>
+
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      `;
+
+    }
+    async function loadNewAttendance(email) {
+
+  const container =
+  document.getElementById("newAttendance");
+
+  const ref =
+  doc(db, "student_attendance", email);
+
+  const snap =
+  await getDoc(ref);
+
+  if (!snap.exists()) {
+
+    container.innerHTML = "";
+
+    return;
+  }
+
+  const data =
+  snap.data();
+
+
+
+  // ================= DATA =================
+
+  const totalFN =
+  data.totalForenoon || 0;
+
+  const presentFN =
+  data.forenoonPresent || 0;
+
+  const totalAN =
+  data.totalAfternoon || 0;
+
+  const presentAN =
+  data.afternoonPresent || 0;
+
+
+
+  // ================= PERCENT =================
+
+  let fnPercent = 0;
+
+  if (totalFN > 0) {
+
+    fnPercent =
+    Math.round(
+      (presentFN / totalFN) * 100
+    );
+
+  }
+
+
+
+  let anPercent = 0;
+
+  if (totalAN > 0) {
+
+    anPercent =
+    Math.round(
+      (presentAN / totalAN) * 100
+    );
+
+  }
+
+
+
+  // ================= OVERALL =================
+
+  const overallTotal =
+  totalFN + totalAN;
+
+  const overallPresent =
+  presentFN + presentAN;
+
+  let overallPercent = 0;
+
+  if (overallTotal > 0) {
+
+    overallPercent =
+    Math.round(
+      (overallPresent / overallTotal) * 100
+    );
+
+  }
+
+
+
+  // ================= STATUS =================
+
+  let statusText = "Low";
+
+  let statusClass =
+  "bg-red-500/10 text-red-400";
+
+
+
+  if (overallPercent >= 85) {
+
+    statusText = "Excellent";
+
+    statusClass =
+    "bg-green-500/10 text-green-400";
+
+  }
+
+  else if (overallPercent >= 75) {
+
+    statusText = "Good";
+
+    statusClass =
+    "bg-yellow-500/10 text-yellow-400";
+
+  }
+
+
+
+  // ================= UI =================
+
+  container.innerHTML = `
+
+    <!-- OVERALL ATTENDANCE -->
+    <div class="card p-5 mb-5">
+
+      <div class="flex justify-between items-center gap-5">
+
+        <!-- LEFT -->
+        <div>
+
+          <h2 class="text-2xl font-bold">
+            Overall Attendance
+          </h2>
+
+          <p class="text-gray-400 text-sm mt-2">
+            Combined FN + AN attendance
+          </p>
+
+          <div class="mt-4">
+
+            <span
+              class="${statusClass} px-4 py-2 rounded-full text-sm"
+            >
+              ${statusText}
+            </span>
+
+          </div>
+
+        </div>
+
+        <!-- RIGHT -->
+        <div
+          class="circle"
+          style="
+            --percent:${overallPercent}%;
+          "
+        >
+
+          <div class="circleInner">
+
+            ${overallPercent}%
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+
+
+    <!-- TITLE -->
+    <div class="flex items-center justify-between mb-4">
+
+      <h2 class="text-2xl font-bold">
+        Attendance Stats
+      </h2>
+
+      <p class="text-sm text-gray-400">
+
+        ${overallPresent}/${overallTotal}
+        Present
+
+      </p>
+
+    </div>
+
+
+
+    <!-- FORENOON -->
+    <div class="card p-5 mb-4">
+
+      <div class="flex justify-between items-center gap-5">
+
+        <!-- LEFT -->
+        <div>
+
+          <div class="flex items-center gap-3 mb-4">
+
+            <div class="w-14 h-14 rounded-2xl bg-yellow-500/10 flex items-center justify-center text-2xl">
+              🌅
+            </div>
+
+            <div>
+
+              <h2 class="text-xl font-bold">
+                Forenoon Attendance
+              </h2>
+
+              <p class="text-gray-400 text-sm">
+                Morning Session
+              </p>
+
+            </div>
+
+          </div>
+
+          <div class="space-y-2">
+
+            <p class="text-sm text-gray-400">
+              Total Classes:
+              <span class="text-white font-semibold">
+                ${totalFN}
+              </span>
+            </p>
+
+            <p class="text-sm text-gray-400">
+              Present:
+              <span class="text-green-400 font-semibold">
+                ${presentFN}
+              </span>
+            </p>
+
+          </div>
+
+        </div>
+
+        <!-- RIGHT -->
+        <div
+          class="circle"
+          style="
+            --percent:${fnPercent}%;
+          "
+        >
+
+          <div class="circleInner">
+
+            ${fnPercent}%
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+
+
+    <!-- AFTERNOON -->
+    <div class="card p-5">
+
+      <div class="flex justify-between items-center gap-5">
+
+        <!-- LEFT -->
+        <div>
+
+          <div class="flex items-center gap-3 mb-4">
+
+            <div class="w-14 h-14 rounded-2xl bg-orange-500/10 flex items-center justify-center text-2xl">
+              🌇
+            </div>
+
+            <div>
+
+              <h2 class="text-xl font-bold">
+                Afternoon Attendance
+              </h2>
+
+              <p class="text-gray-400 text-sm">
+                Afternoon Session
+              </p>
+
+            </div>
+
+          </div>
+
+          <div class="space-y-2">
+
+            <p class="text-sm text-gray-400">
+              Total Classes:
+              <span class="text-white font-semibold">
+                ${totalAN}
+              </span>
+            </p>
+
+            <p class="text-sm text-gray-400">
+              Present:
+              <span class="text-green-400 font-semibold">
+                ${presentAN}
+              </span>
+            </p>
+
+          </div>
+
+        </div>
+
+        <!-- RIGHT -->
+        <div
+          class="circle"
+          style="
+            --percent:${anPercent}%;
+          "
+        >
+
+          <div class="circleInner">
+
+            ${anPercent}%
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  `;
+}
+
+    // BACK
+    window.goBack = function () {
+
+      window.location.href =
+      "dashboard.html";
+
+    };
+
+  </script>
+
+</body>
+</html>

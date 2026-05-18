@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Admin Material Upload</title>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+  <style>
+
+    *{
+      margin:0;
+      padding:0;
+      box-sizing:border-box;
+      font-family:Arial;
+    }
+
+    body{
+      background:#0f172a;
+      color:white;
+      padding:20px;
+    }
+
+    .container{
+      max-width:500px;
+      margin:auto;
+    }
+
+    .title{
+      text-align:center;
+      font-size:28px;
+      font-weight:bold;
+      margin-bottom:25px;
+      color:#38bdf8;
+    }
+
+    .card{
+      background:#1e293b;
+      padding:20px;
+      border-radius:16px;
+    }
+
+    label{
+      display:block;
+      margin-top:18px;
+      margin-bottom:8px;
+      color:#cbd5e1;
+      font-size:14px;
+    }
+
+    input,
+    select{
+      width:100%;
+      padding:12px;
+      border:none;
+      border-radius:10px;
+      background:#334155;
+      color:white;
+      outline:none;
+      font-size:15px;
+    }
+
+    input::placeholder{
+      color:#94a3b8;
+    }
+
+    button{
+      width:100%;
+      padding:14px;
+      margin-top:25px;
+      border:none;
+      border-radius:12px;
+      background:#0ea5e9;
+      color:white;
+      font-size:16px;
+      font-weight:bold;
+      cursor:pointer;
+    }
+
+    button:hover{
+      background:#0284c7;
+    }
+
+    #message{
+      text-align:center;
+      margin-top:20px;
+      font-weight:bold;
+      color:#22c55e;
+    }
+
+  </style>
+</head>
+<body>
+
+<div class="container">
+
+  <div class="title">
+    Study Material Upload
+  </div>
+
+  <div class="card">
+
+    <label>Select Class</label>
+    <select id="classSelect">
+      <option value="">Select Class</option>
+      <option value="6">Class 6</option>
+      <option value="7">Class 7</option>
+      <option value="8">Class 8</option>
+      <option value="9">Class 9</option>
+      <option value="10">Class 10</option>
+      <option value="11">Class 11</option>
+      <option value="12">Class 12</option>
+    </select>
+
+    <label>Select Existing Subject</label>
+    <select id="subjectSelect">
+      <option value="">Select Subject</option>
+    </select>
+
+    <label>Or Type New Subject</label>
+    <input type="text" id="newSubject" placeholder="Enter new subject">
+
+    <label>Chapter Number</label>
+    <input type="number" id="chapterNo" placeholder="Enter chapter number">
+
+    <label>Chapter Name</label>
+    <input type="text" id="chapterName" placeholder="Enter chapter name">
+
+    <label>Material Type</label>
+    <select id="type">
+      <option value="notes">Notes</option>
+      <option value="assignment">Assignment</option>
+      <option value="pyq">PYQ</option>
+      <option value="sample-paper">Sample Paper</option>
+    </select>
+
+    <label>PDF Name</label>
+    <input type="text" id="pdfName" placeholder="Enter PDF name">
+
+    <label>PDF Link</label>
+    <input type="text" id="pdfUrl" placeholder="Paste WordPress PDF link">
+
+   <button id="uploadBtn" onclick="uploadMaterial()">
+  Upload Material
+</button>
+
+<div id="message"></div>
+
+    <div id="message"></div>
+
+  </div>
+
+</div>
+
+<script>
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyADk8OyaN6-8sbzuq3s0TTbe9cO1ryv4PA",
+  authDomain: "ikvm-226e7.firebaseapp.com",
+  projectId: "ikvm-226e7",
+  storageBucket: "ikvm-226e7.firebasestorage.app",
+  messagingSenderId: "760869116173",
+  appId: "1:760869116173:web:ef05c859b6f116d2673844",
+  measurementId: "G-THYLG7RFGW"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+
+  const db = firebase.firestore();
+
+  const classSelect = document.getElementById("classSelect");
+  const subjectSelect = document.getElementById("subjectSelect");
+
+  classSelect.addEventListener("change", loadSubjects);
+
+  async function loadSubjects() {
+
+    const selectedClass = classSelect.value;
+
+    subjectSelect.innerHTML =
+      `<option value="">Select Subject</option>`;
+
+    if (!selectedClass) return;
+
+    const snapshot = await db
+      .collection("study_materials")
+      .where("class", "==", selectedClass)
+      .get();
+
+    let subjects = [];
+
+    snapshot.forEach(doc => {
+
+      const data = doc.data();
+
+      if (
+        data.subject &&
+        !subjects.includes(data.subject)
+      ) {
+        subjects.push(data.subject);
+      }
+
+    });
+
+    subjects.sort();
+
+    subjects.forEach(subject => {
+
+      subjectSelect.innerHTML += `
+        <option value="${subject}">
+          ${subject}
+        </option>
+      `;
+
+    });
+
+  }
+
+  async function uploadMaterial() {
+
+  const selectedClass =
+    document.getElementById("classSelect").value;
+
+  const selectedSubject =
+    document.getElementById("subjectSelect").value;
+
+  const newSubject =
+    document.getElementById("newSubject").value.trim();
+
+  const chapterNo =
+    document.getElementById("chapterNo").value;
+
+  const chapterName =
+    document.getElementById("chapterName").value.trim();
+
+  const type =
+    document.getElementById("type").value;
+
+  const pdfName =
+    document.getElementById("pdfName").value.trim();
+
+  const pdfUrl =
+    document.getElementById("pdfUrl").value.trim();
+
+  const subject =
+    newSubject || selectedSubject;
+
+  const message =
+    document.getElementById("message");
+
+  const uploadBtn =
+    document.getElementById("uploadBtn");
+
+  if (
+    !selectedClass ||
+    !subject ||
+    !chapterNo ||
+    !chapterName ||
+    !pdfName ||
+    !pdfUrl
+  ) {
+
+    alert("Please fill all fields");
+    return;
+
+  }
+
+  try {
+
+    uploadBtn.disabled = true;
+
+    message.style.color = "#38bdf8";
+    message.innerText = "Uploading...";
+
+    await db.collection("study_materials").add({
+
+      class: selectedClass,
+      subject: subject,
+      chapterNo: Number(chapterNo),
+      chapterName: chapterName,
+      type: type,
+      pdfName: pdfName,
+      pdfUrl: pdfUrl,
+      timestamp: firebase.firestore.FieldValue.serverTimestamp()
+
+    });
+
+    message.style.color = "#22c55e";
+    message.innerText =
+      "Material Uploaded Successfully";
+
+    document.getElementById("chapterNo").value = "";
+    document.getElementById("chapterName").value = "";
+    document.getElementById("pdfName").value = "";
+    document.getElementById("pdfUrl").value = "";
+    document.getElementById("newSubject").value = "";
+
+    uploadBtn.disabled = false;
+
+    loadSubjects();
+
+  }
+  catch(error){
+
+    console.log(error);
+
+    uploadBtn.disabled = false;
+
+    message.style.color = "red";
+    message.innerText =
+      "Error Uploading Material";
+
+  }
+
+}
+
+</script>
+
+</body>
+</html>

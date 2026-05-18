@@ -3,68 +3,172 @@
 <head>
   <meta charset="UTF-8">
 
-  <!-- 🔥 MOBILE FIX -->
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- MOBILE -->
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
 
   <title>IKVM Login</title>
 
+  <!-- TAILWIND -->
   <script src="https://cdn.tailwindcss.com"></script>
 
+  <!-- ICONS -->
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+  >
+
   <style>
-    body {
-      background: radial-gradient(circle at top, #0f172a, #020617);
-      font-family: sans-serif;
+
+    body{
+      background: #050505;
+      font-family: Arial, sans-serif;
+      color: white;
     }
+
+    .card{
+      background: #111111;
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 28px;
+    }
+
+    .btn{
+      transition: 0.2s;
+    }
+
+    .btn:active{
+      transform: scale(0.96);
+    }
+
   </style>
+
 </head>
 
-<body class="flex items-center justify-center min-h-screen px-4 text-white">
+<body class="flex items-center justify-center min-h-screen px-4">
 
   <!-- LOGIN CARD -->
-  <div class="w-full max-w-md bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-7 shadow-2xl">
+  <div class="card w-full max-w-md p-7">
 
-    <h1 class="text-3xl font-bold text-center mb-1">IKVM</h1>
-    <p class="text-gray-400 text-center mb-6 text-sm">Student Portal</p>
+    <!-- TOP -->
+    <div class="text-center mb-8">
+
+      <!-- ICON -->
+      <div class="w-24 h-24 mx-auto rounded-3xl bg-purple-500/10 flex items-center justify-center text-purple-400 text-5xl mb-5">
+        <i class="fa-solid fa-building-columns"></i>
+      </div>
+
+      <h1 class="text-4xl font-black">
+        IKVM
+      </h1>
+
+      <p class="text-gray-400 mt-3">
+        Student ERP Portal
+      </p>
+
+    </div>
 
     <!-- EMAIL -->
-    <input 
-      id="email"
-      type="email" 
-      placeholder="Enter Email"
-      class="w-full p-4 mb-4 rounded-xl bg-white/10 text-white placeholder-gray-400 outline-none focus:ring-2 focus:ring-purple-500"
-    >
+    <div class="mb-4">
+
+      <label class="text-sm text-gray-400 block mb-2">
+        Email Address
+      </label>
+
+      <div class="bg-[#1a1a1a] border border-white/5 rounded-2xl px-4 flex items-center">
+
+        <i class="fa-solid fa-envelope text-gray-500"></i>
+
+        <input
+          id="email"
+          type="email"
+          placeholder="Enter Email"
+          class="w-full bg-transparent p-4 outline-none text-white"
+        >
+
+      </div>
+
+    </div>
 
     <!-- PASSWORD -->
-    <input 
-      id="password"
-      type="password" 
-      placeholder="Enter Password"
-      class="w-full p-4 mb-5 rounded-xl bg-white/10 text-white placeholder-gray-400 outline-none focus:ring-2 focus:ring-purple-500"
-    >
+    <div class="mb-5">
+
+      <label class="text-sm text-gray-400 block mb-2">
+        Password
+      </label>
+
+      <div class="bg-[#1a1a1a] border border-white/5 rounded-2xl px-4 flex items-center">
+
+        <i class="fa-solid fa-lock text-gray-500"></i>
+
+        <input
+          id="password"
+          type="password"
+          placeholder="Enter Password"
+          class="w-full bg-transparent p-4 outline-none text-white"
+        >
+
+      </div>
+
+    </div>
 
     <!-- BUTTON -->
-    <button 
-      onclick="loginUser()" 
+    <button
+      onclick="loginUser()"
       id="loginBtn"
-      class="w-full bg-gradient-to-r from-purple-600 to-pink-600 active:scale-95 transition-all text-white p-4 rounded-xl font-semibold text-lg"
+      class="btn w-full bg-gradient-to-r from-purple-600 to-pink-600 rounded-2xl p-4 font-bold text-lg"
     >
       Login
     </button>
 
+    <!-- ADMIN INFO -->
+    <div class="mt-5 bg-red-500/10 border border-red-500/10 rounded-2xl p-4">
+
+      <div class="flex items-center gap-3">
+
+        <div class="text-red-400 text-xl">
+          <i class="fa-solid fa-user-shield"></i>
+        </div>
+
+        <div>
+
+          <h2 class="font-semibold">
+            Admin Access
+          </h2>
+
+          <p class="text-xs text-gray-400 mt-1">
+            Admin email automatically redirects
+            to admin portal after login.
+          </p>
+
+        </div>
+
+      </div>
+
+    </div>
+
     <!-- STATUS -->
-    <p id="status" class="text-center text-sm mt-4 text-gray-400"></p>
+    <p
+      id="status"
+      class="text-center text-sm mt-5 text-gray-400"
+    ></p>
 
   </div>
 
-  <!-- 🔥 FIREBASE LOGIC -->
+  <!-- FIREBASE -->
   <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { 
-      getAuth, 
-      signInWithEmailAndPassword 
-    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
-    // ✅ YOUR FIREBASE CONFIG
+    import { initializeApp }
+    from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+
+    import {
+      getAuth,
+      signInWithEmailAndPassword
+    }
+    from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+    // FIREBASE CONFIG
     const firebaseConfig = {
       apiKey: "AIzaSyADk8OyaN6-8sbzuq3s0TTbe9cO1ryv4PA",
       authDomain: "ikvm-226e7.firebaseapp.com",
@@ -76,43 +180,90 @@
 
     // INIT
     const app = initializeApp(firebaseConfig);
+
     const auth = getAuth(app);
 
-    // LOGIN FUNCTION
+    // LOGIN
     window.loginUser = async function () {
-      const email = document.getElementById("email").value.trim();
-      const password = document.getElementById("password").value.trim();
-      const status = document.getElementById("status");
-      const btn = document.getElementById("loginBtn");
 
+      const email =
+      document.getElementById("email").value.trim();
+
+      const password =
+      document.getElementById("password").value.trim();
+
+      const status =
+      document.getElementById("status");
+
+      const btn =
+      document.getElementById("loginBtn");
+
+      // EMPTY CHECK
       if (!email || !password) {
-        status.innerText = "Please fill all fields ❗";
+
+        status.innerText =
+        "❌ Please fill all fields";
+
         return;
       }
 
       try {
-        btn.innerText = "Logging in...";
+
+        // LOADING
+        btn.innerHTML =
+        '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Logging in...';
+
         btn.disabled = true;
 
-        await signInWithEmailAndPassword(auth, email, password);
+        // FIREBASE LOGIN
+        await signInWithEmailAndPassword(
+          auth,
+          email,
+          password
+        );
 
-        status.innerText = "Login successful ✅";
+        status.innerText =
+        "✅ Login successful";
 
-        // 🔥 ADMIN CHECK
+        // ADMIN CHECK
         setTimeout(() => {
-          if (email === "admin@gmail.com") {
-            window.location.href = "admin.html";
-          } else {
-            window.location.href = "dashboard.html";
+
+          // ADMIN
+          if (
+            email === "admin@gmail.com"
+          ) {
+
+            window.location.href =
+            "admin.html";
+
           }
+
+          // STUDENT
+          else {
+
+            window.location.href =
+            "dashboard.html";
+
+          }
+
         }, 800);
 
-      } catch (error) {
-        status.innerText = "❌ " + error.message;
-        btn.disabled = false;
-        btn.innerText = "Login";
       }
+
+      catch (error) {
+
+        status.innerText =
+        "❌ " + error.message;
+
+        btn.disabled = false;
+
+        btn.innerText =
+        "Login";
+
+      }
+
     };
+
   </script>
 
 </body>

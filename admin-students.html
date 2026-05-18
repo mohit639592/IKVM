@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
+
+  <title>Admin Student Panel</title>
+
+  <style>
+
+    *{
+      margin:0;
+      padding:0;
+      box-sizing:border-box;
+      font-family:Arial;
+    }
+
+    body{
+      background:#0f172a;
+      color:white;
+      padding:20px;
+    }
+
+    h1{
+      text-align:center;
+      margin-bottom:20px;
+      color:#38bdf8;
+    }
+
+    .top{
+      display:flex;
+      gap:10px;
+      margin-bottom:20px;
+      flex-wrap:wrap;
+    }
+
+    select,
+    input{
+      padding:12px;
+      border:none;
+      outline:none;
+      border-radius:10px;
+      background:#1e293b;
+      color:white;
+      flex:1;
+    }
+
+    .student-card{
+      background:#1e293b;
+      padding:20px;
+      border-radius:15px;
+      margin-bottom:20px;
+    }
+
+    .student-card h2{
+      color:#38bdf8;
+      margin-bottom:10px;
+    }
+
+    .section{
+      margin-top:15px;
+      background:#0f172a;
+      padding:15px;
+      border-radius:10px;
+    }
+
+    .section h3{
+      margin-bottom:10px;
+      color:#22c55e;
+    }
+
+    .item{
+      background:#1e293b;
+      padding:10px;
+      border-radius:10px;
+      margin-bottom:10px;
+    }
+
+    .badge{
+      display:inline-block;
+      padding:5px 10px;
+      border-radius:10px;
+      margin-top:5px;
+      font-size:12px;
+    }
+
+    .green{
+      background:green;
+    }
+
+    .yellow{
+      background:orange;
+    }
+
+    .red{
+      background:red;
+    }
+
+    .loading{
+      text-align:center;
+      margin-top:50px;
+      font-size:20px;
+      color:#38bdf8;
+    }
+
+    @media(max-width:700px){
+
+      .top{
+        flex-direction:column;
+      }
+
+    }
+
+  </style>
+
+</head>
+
+<body>
+
+  <h1>Student Management Panel</h1>
+
+  <div class="top">
+
+    <select id="classSelect">
+      <option>Loading Classes...</option>
+    </select>
+
+    <input
+      type="text"
+      id="search"
+      placeholder="Search Student"
+    />
+
+  </div>
+
+  <div id="studentContainer"></div>
+
+
+
+<script type="module">
+
+import { initializeApp }
+from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+
+import {
+  getFirestore,
+  collection,
+  getDocs,
+  query,
+  where,
+  doc,
+  getDoc
+}
+from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+
+
+// ================= FIREBASE =================
+
+const firebaseConfig = {
+
+  apiKey: "AIzaSyADk8OyaN6-8sbzuq3s0TTbe9cO1ryv4PA",
+  authDomain: "ikvm-226e7.firebaseapp.com",
+  projectId: "ikvm-226e7",
+  storageBucket: "ikvm-226e7.firebasestorage.app",
+  messagingSenderId: "760869116173",
+  appId: "1:760869116173:web:ef05c859b6f116d2673844",
+  measurementId: "G-THYLG7RFGW"
+
+};
+
+const app = initializeApp(firebaseConfig);
+
+const db = getFirestore(app);
+
+
+
+// ================= ELEMENTS =================
+
+const classSelect =
+document.getElementById("classSelect");
+
+const studentContainer =
+document.getElementById("studentContainer");
+
+const search =
+document.getElementById("search");
+
+
+
+let allStudents = [];
+let allTests = [];
+
+
+
+// ================= LOAD TESTS =================
+
+async function loadTests(){
+
+  const testsSnap =
+    await getDocs(
+      collection(db, "tests")
+    );
+
+  allTests = [];
+
+  testsSnap.forEach(testDoc => {
+
+    allTests.push({
+
+      id: testDoc.id,
+
+      ...testDoc.data()
+
+    });
+
+  });
+
+}
+
+
+
+// ================= LOAD CLASSES =================
+
+async function loadClasses() {
+
+  const snap =
+    await getDocs(
+      collection(db, "users")
+    );
+
+  const classes = new Set();
+
+  snap.forEach(docSnap => {
+
+    const data = docSnap.data();
+
+    if(data.class){
+
+      classes.add(data.class);
+
+    }
+
+  });
+
+  classSelect.innerHTML = `
+    <option value="all">
+      All Students
+    </option>
+  `;
+
+  [...classes]
+  .sort((a,b)=>
+    Number(a) - Number(b)
+  )
+  .forEach(cls => {
+
+    classSelect.innerHTML += `
+      <option value="${cls}">
+        Class ${cls}
+      </option>
+    `;
+
+  });
+
+}
+
+
+
+// ================= LOAD STUDENTS =================
+
+async function loadStudents(selectedClass){
+
+  studentContainer.innerHTML = `
+    <div class="loading">
+      Loading Students...
+    </div>
+  `;
+
+  let snap;
+
+  if(selectedClass === "all"){
+
+    snap =
+      await getDocs(
+        collection(db, "users")
+      );
+
+  }
+  else{
+
+    const q =
+      query(
+        collection(db, "users"),
+        where(
+          "class",
+          "==",
+          selectedClass
+        )
+      );
+
+    snap =
+      await getDocs(q);
+
+  }
+
+  allStudents = [];
+
+
+
+  for(const studentDoc of snap.docs){
+
+    const student =
+      studentDoc.data();
+
+    const email =
+      studentDoc.id;
+
+    // ===== HOMEWORK =====
+
+    let attendanceData = null;
+
+    try{
+
+      const attendanceSnap =
+        await getDoc(
+          doc(
+            db,
+            "homework_attendance",
+            email
+          )
+        );
+
+      if(attendanceSnap.exists()){
+
+        attendanceData =
+          attendanceSnap.data();
+
+      }
+
+    }
+    catch(err){
+
+      console.log(err);
+
+    }
+
+
+
+    // ===== RESULTS =====
+
+    let testResults = [];
+
+    for(const test of allTests){
+
+      try{
+
+        const resultSnap =
+          await getDoc(
+            doc(
+              db,
+              "results",
+              test.id,
+              "students",
+              email
+            )
+          );
+
+        if(resultSnap.exists()){
+
+          const resultData =
+            resultSnap.data();
+
+          testResults.push({
+
+            testName:
+              test.testName || "Test",
+
+            subject:
+              test.subject || "N/A",
+
+            totalMarks:
+              Number(
+                test.totalMarks || 0
+              ),
+
+            type:
+              resultData.type || "N/A",
+
+            score:
+              Number(
+                resultData.score || 0
+              )
+
+          });
+
+        }
+
+      }
+      catch(err){
+
+        console.log(err);
+
+      }
+
+    }
+
+
+
+    allStudents.push({
+
+      ...student,
+
+      email,
+
+      attendanceData,
+
+      testResults
+
+    });
+
+  }
+
+  showStudents(allStudents);
+
+}
+
+
+
+// ================= SHOW STUDENTS =================
+
+function showStudents(students){
+
+  studentContainer.innerHTML = "";
+
+  if(students.length === 0){
+
+    studentContainer.innerHTML = `
+      <div class="loading">
+        No Students Found
+      </div>
+    `;
+
+    return;
+
+  }
+
+  students.forEach(student => {
+
+    // ===== ATTENDANCE =====
+
+    let attendanceHTML =
+      "No Attendance Data";
+
+    if(student.attendanceData){
+
+      const totalHeld =
+        student.attendanceData.totalHeld || 0;
+
+      const totalDone =
+        student.attendanceData.totalDone || 0;
+
+      const percent =
+        Math.round(
+          (
+            totalDone /
+            (totalHeld || 1)
+          ) * 100
+        );
+
+      let color = "red";
+
+      if(percent >= 75){
+
+        color = "green";
+
+      }
+      else if(percent >= 50){
+
+        color = "yellow";
+
+      }
+
+      attendanceHTML = `
+
+        <div class="item">
+
+          <p>
+            Total Held :
+            ${totalHeld}
+          </p>
+
+          <p>
+            Total Done :
+            ${totalDone}
+          </p>
+
+          <p>
+            Completion :
+            ${percent}%
+          </p>
+
+          <span class="badge ${color}">
+            ${percent}%
+          </span>
+
+        </div>
+
+      `;
+
+    }
+
+
+
+    // ===== RESULTS =====
+
+    let resultHTML =
+      "No Test Results";
+
+    if(student.testResults.length > 0){
+
+      resultHTML = "";
+
+      student.testResults.forEach(test => {
+
+        const percentage =
+          Math.round(
+            (
+              (test.score || 0)
+              /
+              (test.totalMarks || 1)
+            ) * 100
+          );
+
+        resultHTML += `
+
+          <div class="item">
+
+            <p>
+              <b>
+                ${test.testName}
+              </b>
+            </p>
+
+            <p>
+              Subject :
+              ${test.subject}
+            </p>
+
+            <p>
+              Type :
+              ${test.type}
+            </p>
+
+            <p>
+              Score :
+              ${test.score}
+              /
+              ${test.totalMarks}
+            </p>
+
+            <p>
+              Percentage :
+              ${percentage}%
+            </p>
+
+          </div>
+
+        `;
+
+      });
+
+    }
+
+
+
+    studentContainer.innerHTML += `
+
+      <div class="student-card">
+
+        <h2>
+          ${student.name || "No Name"}
+        </h2>
+
+        <p>
+          <b>Email :</b>
+          ${student.email}
+        </p>
+
+        <p>
+          <b>Class :</b>
+          ${student.class || "No Class"}
+        </p>
+
+
+
+        <div class="section">
+
+          <h3>
+            Homework Analytics
+          </h3>
+
+          ${attendanceHTML}
+
+        </div>
+
+
+
+        <div class="section">
+
+          <h3>
+            Test Results
+          </h3>
+
+          ${resultHTML}
+
+        </div>
+
+      </div>
+
+    `;
+
+  });
+
+}
+
+
+
+// ================= CLASS CHANGE =================
+
+classSelect.addEventListener(
+  "change",
+  () => {
+
+    loadStudents(
+      classSelect.value
+    );
+
+  }
+);
+
+
+
+// ================= SEARCH =================
+
+search.addEventListener(
+  "input",
+  () => {
+
+    const value =
+      search.value.toLowerCase();
+
+    const filtered =
+      allStudents.filter(student =>
+
+        (student.name || "")
+        .toLowerCase()
+        .includes(value)
+
+      );
+
+    showStudents(filtered);
+
+  }
+);
+
+
+
+// ================= START =================
+
+await loadTests();
+
+await loadClasses();
+
+await loadStudents("all");
+
+</script>
+
+</body>
+</html>

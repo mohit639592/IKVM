@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Study Material</title>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+  <style>
+
+    *{
+      margin:0;
+      padding:0;
+      box-sizing:border-box;
+      font-family:Arial;
+    }
+
+    body{
+      background:#0f172a;
+      color:white;
+      padding:20px;
+    }
+
+    .title{
+      text-align:center;
+      font-size:28px;
+      font-weight:bold;
+      margin-bottom:25px;
+      color:#38bdf8;
+    }
+
+    .section-title{
+      margin-top:25px;
+      margin-bottom:15px;
+      font-size:20px;
+      color:#38bdf8;
+    }
+
+    .card{
+      background:#1e293b;
+      padding:18px;
+      border-radius:16px;
+      margin-bottom:15px;
+      cursor:pointer;
+      transition:0.3s;
+    }
+
+    .card:hover{
+      transform:scale(1.02);
+    }
+
+    .subject-name{
+      font-size:18px;
+      font-weight:bold;
+    }
+
+    .chapter-name{
+      font-size:17px;
+      font-weight:bold;
+      margin-bottom:8px;
+    }
+
+    .pdf-name{
+      font-size:16px;
+      font-weight:bold;
+      margin-bottom:8px;
+    }
+
+    .type{
+      display:inline-block;
+      padding:5px 10px;
+      border-radius:20px;
+      background:#0ea5e9;
+      font-size:13px;
+      margin-top:5px;
+    }
+
+    .open-btn{
+      margin-top:15px;
+      padding:10px 14px;
+      border:none;
+      border-radius:10px;
+      background:#22c55e;
+      color:white;
+      cursor:pointer;
+      font-weight:bold;
+    }
+
+    .loading{
+      text-align:center;
+      margin-top:30px;
+      font-size:18px;
+      color:#38bdf8;
+    }
+
+    iframe{
+      width:100%;
+      height:100vh;
+      border:none;
+      margin-top:20px;
+      border-radius:12px;
+    }
+
+  </style>
+</head>
+<body>
+
+  <div class="title">
+    Study Materials
+  </div>
+
+  <div id="loading" class="loading">
+    Loading...
+  </div>
+
+  <div id="subjects"></div>
+
+  <div id="chapters"></div>
+
+  <div id="materials"></div>
+
+<script>
+
+  const firebaseConfig = {
+
+    apiKey: "AIzaSyADk8OyaN6-8sbzuq3s0TTbe9cO1ryv4PA",
+  authDomain: "ikvm-226e7.firebaseapp.com",
+  projectId: "ikvm-226e7",
+  storageBucket: "ikvm-226e7.firebasestorage.app",
+  messagingSenderId: "760869116173",
+  appId: "1:760869116173:web:ef05c859b6f116d2673844",
+  measurementId: "G-THYLG7RFGW"
+
+  };
+
+  firebase.initializeApp(firebaseConfig);
+
+  const auth = firebase.auth();
+  const db = firebase.firestore();
+
+  let studentClass = "";
+
+  auth.onAuthStateChanged(async (user) => {
+
+    if(user){
+
+      const userDoc = await db
+        .collection("users")
+        .doc(user.email)
+        .get();
+
+      const userData = userDoc.data();
+
+      studentClass = userData.class;
+
+      loadSubjects();
+
+    }
+
+  });
+
+  async function loadSubjects(){
+
+    document.getElementById("loading").innerText =
+      "Loading Subjects...";
+
+    const snapshot = await db
+      .collection("study_materials")
+      .where("class","==",studentClass)
+      .get();
+
+    let subjects = [];
+
+    snapshot.forEach(doc => {
+
+      const data = doc.data();
+
+      if(
+        data.subject &&
+        !subjects.includes(data.subject)
+      ){
+
+        subjects.push(data.subject);
+
+      }
+
+    });
+
+    subjects.sort();
+
+    document.getElementById("loading").style.display =
+      "none";
+
+    const subjectsDiv =
+      document.getElementById("subjects");
+
+    subjectsDiv.innerHTML =
+      `<div class="section-title">Subjects</div>`;
+
+    subjects.forEach(subject => {
+
+      subjectsDiv.innerHTML += `
+
+        <div class="card"
+          onclick="loadChapters('${subject}')">
+
+          <div class="subject-name">
+            📘 ${subject}
+          </div>
+
+        </div>
+
+      `;
+
+    });
+
+  }
+
+  async function loadChapters(subject){
+
+    document.getElementById("chapters").innerHTML =
+      "";
+
+    document.getElementById("materials").innerHTML =
+      "";
+
+    const snapshot = await db
+      .collection("study_materials")
+      .where("class","==",studentClass)
+      .where("subject","==",subject)
+      .get();
+
+    let chapters = [];
+
+    snapshot.forEach(doc => {
+
+      const data = doc.data();
+
+      const exists = chapters.find(
+        item =>
+        item.chapterNo === data.chapterNo
+      );
+
+      if(!exists){
+
+        chapters.push({
+
+          chapterNo: data.chapterNo,
+          chapterName: data.chapterName
+
+        });
+
+      }
+
+    });
+
+    chapters.sort((a,b)=>
+      a.chapterNo - b.chapterNo
+    );
+
+    const chaptersDiv =
+      document.getElementById("chapters");
+
+    chaptersDiv.innerHTML =
+      `<div class="section-title">Chapters</div>`;
+
+    chapters.forEach(chapter => {
+
+      chaptersDiv.innerHTML += `
+
+        <div class="card"
+          onclick="loadMaterials(
+            '${subject}',
+            '${chapter.chapterNo}'
+          )">
+
+          <div class="chapter-name">
+            Chapter ${chapter.chapterNo}
+          </div>
+
+          <div>
+            ${chapter.chapterName}
+          </div>
+
+        </div>
+
+      `;
+
+    });
+
+  }
+
+  async function loadMaterials(subject, chapterNo){
+
+    const snapshot = await db
+      .collection("study_materials")
+      .where("class","==",studentClass)
+      .where("subject","==",subject)
+      .where("chapterNo","==",Number(chapterNo))
+      .get();
+
+    const materialsDiv =
+      document.getElementById("materials");
+
+    materialsDiv.innerHTML =
+      `<div class="section-title">Materials</div>`;
+
+    snapshot.forEach(doc => {
+
+      const data = doc.data();
+
+      materialsDiv.innerHTML += `
+
+        <div class="card">
+
+          <div class="pdf-name">
+            📄 ${data.pdfName}
+          </div>
+
+          <div class="type">
+            ${data.type}
+          </div>
+
+          <br>
+
+          <button class="open-btn"
+            onclick="openPdf('${data.pdfUrl}')">
+
+            Open PDF
+
+          </button>
+
+        </div>
+
+      `;
+
+    });
+
+  }
+function openPdf(url){
+
+  const materialsDiv =
+    document.getElementById("materials");
+
+  materialsDiv.innerHTML += `
+
+    <div id="pdfViewer">
+
+      <button
+        onclick="closePdf()"
+        style="
+          width:100%;
+          padding:14px;
+          margin-top:20px;
+          margin-bottom:10px;
+          border:none;
+          border-radius:12px;
+          background:red;
+          color:white;
+          font-size:16px;
+          font-weight:bold;
+          cursor:pointer;
+        "
+      >
+        Close PDF
+      </button>
+
+      <iframe src="${url}"></iframe>
+
+    </div>
+
+  `;
+
+}
+
+</script>
+
+</body>
+</html>
